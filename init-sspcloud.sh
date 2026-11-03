@@ -7,12 +7,19 @@
 # d'adresse interne ni de donnée.
 #
 # Ce que fait le script :
-#   1. ouvre automatiquement le .Rproj du projet cloné ;
+#   1. ouvre le .Rproj du projet cloné s'il en contient un,
+#      ou le crée si l'argument rproj est donné ;
 #   2. applique mes préférences RStudio ;
 #   3. installe les packages listés dans packages.txt (racine du projet) ;
 #   4. installe Claude Code ;
 #   5. clone mon dépôt privé de skills et le relie à Claude Code.
 # =============================================================================
+
+# --- Argument facultatif (champ des arguments du script dans l'onglet Init) ----
+#   rproj : crée le projet RStudio s'il n'existe pas encore (nouveau projet R)
+#   (sans argument : le .Rproj est ouvert s'il existe, rien n'est créé sinon)
+CREER_RPROJ="no"
+[ "$1" = "rproj" ] && CREER_RPROJ="yes"
 
 # --- À personnaliser ---------------------------------------------------------
 DEPOT_SKILLS="mes-skills"    # dépôt privé de skills (laisser vide pour ignorer)
@@ -29,21 +36,43 @@ en_onyxia() {
 
 
 # 1 ###########################################################################
-# Ouverture automatique du .Rproj et options de la console
+# Ouverture automatique du projet RStudio, uniquement si le dépôt cloné
+# contient déjà un fichier .Rproj (un projet non R n'est pas touché),
+# et options de la console R
 # -----------------------------------------------------------------------------
 
 SUBDIR=$(basename "$(ls -d "$WORK_DIR"/*/ 2>/dev/null | grep -v "/$DEPOT_SKILLS/" | head -n 1)")
-
+RPROJ=""
 if [ -n "$SUBDIR" ]; then
-  echo "[init] Ouverture du Rproj du dossier $SUBDIR"
+  RPROJ=$(ls "$WORK_DIR/$SUBDIR"/*.Rproj 2>/dev/null | head -n 1)
+fi
+
+# Nouveau projet R demandé (argument rproj) : RStudio créera le .Rproj
+# en ouvrant le dossier ; .Rproj.user/ est exclu de Git d'avance.
+if [ -z "$RPROJ" ] && [ "$CREER_RPROJ" = "yes" ] && [ -n "$SUBDIR" ]; then
+  RPROJ="$WORK_DIR/$SUBDIR"
+  grep -qx '.Rproj.user/' "$WORK_DIR/$SUBDIR/.gitignore" 2>/dev/null \
+    || echo '.Rproj.user/' >> "$WORK_DIR/$SUBDIR/.gitignore"
+  chown onyxia:users "$WORK_DIR/$SUBDIR/.gitignore" 2>/dev/null
+  echo "[init] Argument rproj : création du projet RStudio $SUBDIR"
+fi
+
+if [ -n "$RPROJ" ]; then
+  echo "[init] Ouverture automatique du projet $(basename "$RPROJ")"
   cat >> "$WORK_DIR/.Rprofile" << RPROFILE
 
 setHook('rstudio.sessionInit', function(newSession) {
   if (newSession && identical(getwd(), '${WORK_DIR}')) {
     message('Activation du projet RStudio')
-    rstudioapi::openProject('${SUBDIR}')
+    rstudioapi::openProject('${RPROJ}')
   }
 }, action = 'append')
+RPROFILE
+else
+  echo "[init] Pas de fichier .Rproj dans le projet : pas d'ouverture automatique (argument rproj pour le créer)."
+fi
+
+cat >> "$WORK_DIR/.Rprofile" << 'RPROFILE'
 
 options(
   prompt = 'R> ',
@@ -51,9 +80,6 @@ options(
   continue = '+++ '
 )
 RPROFILE
-else
-  echo "[init] Aucun projet trouvé dans $WORK_DIR : pas d'ouverture automatique."
-fi
 
 
 # 2 ###########################################################################
@@ -112,6 +138,19 @@ en_onyxia 'curl -fsSL https://claude.ai/install.sh | bash' \
   || echo "[init] Installation de Claude Code impossible."
 grep -q '.local/bin' /home/onyxia/.bashrc 2>/dev/null \
   || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/onyxia/.bashrc
+
+# Premier lancement sans questions : thème choisi et accueil marqué comme fait.
+# La connexion se fait par le jeton CLAUDE_CODE_OAUTH_TOKEN (généré par
+# `claude setup-token`), injecté depuis un secret Vault d'Onyxia.
+if [ ! -f /home/onyxia/.claude.json ]; then
+  echo '{"hasCompletedOnboarding": true, "theme": "dark"}' > /home/onyxia/.claude.json
+  chown onyxia:users /home/onyxia/.claude.json 2>/dev/null
+fi
+if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  echo "[init] Jeton Claude présent : connexion automatique."
+else
+  echo "[init] Pas de jeton Claude : connexion manuelle au premier lancement."
+fi
 
 
 # 5 ###########################################################################
