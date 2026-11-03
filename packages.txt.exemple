@@ -1,0 +1,5 @@
+# Exemple de packages.txt à placer à la racine d'un PROJET (pas de ce dépôt).
+# Un package par ligne ; les lignes commençant par # sont ignorées.
+# Le script installe seulement ceux qui ne sont pas déjà présents.
+janitor
+readODS
