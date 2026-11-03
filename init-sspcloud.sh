@@ -82,10 +82,15 @@ if [ -z "$RPROJ" ] && [ "$CREER_RPROJ" = "yes" ] && [ -n "$SUBDIR" ]; then
   echo "[init] Argument rproj : création du projet RStudio $SUBDIR"
 fi
 
-# R ne lit qu'UN seul .Rprofile : celui du dossier courant masque ~/.Rprofile,
-# où Onyxia place sa propre ouverture du projet. On le charge donc d'abord.
+# R ne lit qu'UN seul .Rprofile : celui du dossier courant masque ~/.Rprofile.
+# On charge ce dernier SAUF son ouverture du projet par Onyxia, qui créerait
+# un .Rproj dans tout dépôt cloné : l'ouverture est gérée ci-dessous.
 cat >> "$WORK_DIR/.Rprofile" << 'RPROFILE'
-if (file.exists('~/.Rprofile')) source('~/.Rprofile')
+if (file.exists('~/.Rprofile')) {
+  lignes <- readLines('~/.Rprofile', warn = FALSE)
+  try(eval(parse(text = lignes[!grepl('openProject', lignes)])), silent = TRUE)
+  rm(lignes)
+}
 RPROFILE
 
 if [ -n "$RPROJ" ]; then
@@ -170,18 +175,35 @@ en_onyxia 'curl -fsSL https://claude.ai/install.sh | bash' \
 grep -q '.local/bin' /home/onyxia/.bashrc 2>/dev/null \
   || echo 'export PATH="$HOME/.local/bin:$PATH"' >> /home/onyxia/.bashrc
 
-# Premier lancement sans questions : thème choisi et accueil marqué comme fait.
-# La connexion se fait par le jeton CLAUDE_CODE_OAUTH_TOKEN (généré par
-# `claude setup-token`), injecté depuis un secret Vault d'Onyxia.
-if [ ! -f /home/onyxia/.claude.json ]; then
-  echo '{"hasCompletedOnboarding": true, "theme": "dark"}' > /home/onyxia/.claude.json
-  chown onyxia:users /home/onyxia/.claude.json 2>/dev/null
-fi
-if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
-  echo "[init] Jeton Claude présent : connexion automatique."
+# Premier lancement sans questions : thème automatique et accueil marqué comme fait.
+FICHIER_CLAUDE=/home/onyxia/.claude.json
+if [ -f "$FICHIER_CLAUDE" ] && command -v jq > /dev/null; then
+  jq '.theme = "auto" | .hasCompletedOnboarding = true' "$FICHIER_CLAUDE" > "$FICHIER_CLAUDE.tmp" \
+    && mv "$FICHIER_CLAUDE.tmp" "$FICHIER_CLAUDE"
 else
-  echo "[init] Pas de jeton Claude : connexion manuelle au premier lancement."
+  echo '{"hasCompletedOnboarding": true, "theme": "auto"}' > "$FICHIER_CLAUDE"
 fi
+chown onyxia:users "$FICHIER_CLAUDE" 2>/dev/null
+
+# Connexion par le jeton CLAUDE_CODE_OAUTH_TOKEN (généré par `claude setup-token`),
+# rangé dans un secret Vault d'Onyxia. Onyxia ne le transmet qu'à R
+# (Renviron.site) et à /etc/environment, que le terminal RStudio ne lit pas :
+# le .bashrc va l'y chercher à chaque ouverture de terminal (sans le recopier).
+grep -q 'CLAUDE_CODE_OAUTH_TOKEN' /home/onyxia/.bashrc 2>/dev/null \
+  || cat >> /home/onyxia/.bashrc << 'BASHRC'
+
+# Jeton Claude Code injecté par Vault (voir init-sspcloud.sh)
+if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -r /etc/environment ]; then
+  CLAUDE_CODE_OAUTH_TOKEN=$(sed -n 's/^CLAUDE_CODE_OAUTH_TOKEN="\{0,1\}\([^"]*\)"\{0,1\}$/\1/p' /etc/environment | tail -n 1)
+  if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then export CLAUDE_CODE_OAUTH_TOKEN; else unset CLAUDE_CODE_OAUTH_TOKEN; fi
+fi
+BASHRC
+
+case "$CLAUDE_CODE_OAUTH_TOKEN" in
+  sk-ant-oat*) echo "[init] Jeton Claude présent : connexion automatique." ;;
+  "")          echo "[init] Pas de jeton Claude : connexion manuelle au premier lancement." ;;
+  *)           echo "[init] Jeton Claude mal formé (doit commencer par sk-ant-oat) : refaire claude setup-token." ;;
+esac
 
 
 # 5 ###########################################################################
