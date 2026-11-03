@@ -218,6 +218,17 @@ else
 fi
 chown onyxia:users "$FICHIER_CLAUDE" 2>/dev/null
 
+# Modèle par défaut : Opus (équivalent de /model, perdu à chaque nouveau service).
+REGLAGES_CLAUDE=/home/onyxia/.claude/settings.json
+mkdir -p /home/onyxia/.claude
+if [ -f "$REGLAGES_CLAUDE" ] && command -v jq > /dev/null; then
+  jq '.model = "opus"' "$REGLAGES_CLAUDE" > "$REGLAGES_CLAUDE.tmp" \
+    && mv "$REGLAGES_CLAUDE.tmp" "$REGLAGES_CLAUDE"
+else
+  echo '{"model": "opus"}' > "$REGLAGES_CLAUDE"
+fi
+chown -R onyxia:users /home/onyxia/.claude 2>/dev/null
+
 # Connexion par le jeton CLAUDE_CODE_OAUTH_TOKEN (généré par `claude setup-token`),
 # rangé dans un secret Vault d'Onyxia. Onyxia ne le transmet qu'à R
 # (Renviron.site) et à /etc/environment, que le terminal RStudio ne lit pas :

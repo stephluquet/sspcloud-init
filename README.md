@@ -10,7 +10,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 1. Ouvre automatiquement le projet RStudio du dépôt cloné au lancement du service, pour avoir l’onglet Git (RStudio ne l’affiche que dans un projet). Si le dépôt n’a pas de `.Rproj` (dépôt vide, projet non R…), il est créé et exclu de Git localement via `.git/info/exclude`, comme `.Rproj.user/` : le dépôt et son `.gitignore` ne sont pas modifiés. Pour versionner ce `.Rproj`, le retirer de `.git/info/exclude`.
 2. Applique mes préférences RStudio (pipe natif, pas de sauvegarde du workspace, thème sombre…).
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
-4. Installe **Claude Code** (thème automatique, connexion par le jeton Vault s’il est fourni).
+4. Installe **Claude Code** (modèle Opus par défaut, thème automatique, connexion par le jeton Vault s’il est fourni).
 5. Clone mon dépôt privé de skills et le relie à Claude Code (`~/.claude/skills`).
 
 Chaque étape écrit une ligne commençant par `[init]` dans les journaux du service, pour repérer facilement un éventuel problème.
