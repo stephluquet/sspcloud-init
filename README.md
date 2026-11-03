@@ -18,7 +18,7 @@ Chaque étape écrit une ligne commençant par `[init]` dans les journaux du ser
 ## Pré-requis (une fois pour toutes)
 
 - **Jeton GitHub** renseigné dans Onyxia : *Mon compte* → *Git* → *Token d'accès personnel*. Il est injecté dans les services sous le nom `GIT_PERSONAL_ACCESS_TOKEN` et sert à cloner le dépôt privé de skills. À renouveler avant son expiration.
-- **Jeton Claude** (facultatif, évite la connexion à chaque service) : généré une fois avec `claude setup-token`, rangé dans un secret Vault d'Onyxia sous le nom `CLAUDE_CODE_OAUTH_TOKEN`, et injecté dans le service (onglet Vault de sa configuration). Il commence par `sk-ant-oat01-` : copier la valeur entière affichée par `claude setup-token`. Ne jamais l'écrire dans ce dépôt.
+- **Jeton Claude** (facultatif, évite la connexion à chaque service) : généré une fois avec `claude setup-token`, rangé dans un secret Vault d'Onyxia sous le nom `CLAUDE_CODE_OAUTH_TOKEN`, et injecté dans le service (onglet Vault de sa configuration). Copier la valeur **entière** affichée par `claude setup-token` (attention aux retours à la ligne du terminal). Pour vérifier un jeton : `CLAUDE_CODE_OAUTH_TOKEN='…' claude -p ok` doit répondre au lieu d’afficher `401 Invalid bearer token`. Ne jamais l'écrire dans ce dépôt.
 - **Variable à personnaliser** en haut de `init-sspcloud.sh` : `DEPOT_SKILLS` (nom du dépôt privé de skills). L’identifiant GitHub est retrouvé automatiquement à partir du jeton.
 
 ## Utilisation dans Onyxia

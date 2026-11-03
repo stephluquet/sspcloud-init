@@ -48,15 +48,24 @@ AIDE_GIT='!f() { test "$1" = get && echo username=x-access-token && echo "passwo
 git config --file /home/onyxia/.gitconfig "credential.https://github.com.helper" "$AIDE_GIT"
 chown onyxia:users /home/onyxia/.gitconfig 2>/dev/null
 
+# Onyxia lance ce script en root, AVANT de rendre le dépôt à onyxia (chown fait
+# après le script) : git est donc lancé par l'utilisateur courant, pas par onyxia,
+# qui le refuserait (« dubious ownership ») et laisserait le jeton en place.
 for DEPOT in "$WORK_DIR"/*/; do
   [ -d "$DEPOT/.git" ] || continue
-  URL=$(en_onyxia "git -C '$DEPOT' remote get-url origin" 2>/dev/null)
+  URL=$(git -c safe.directory='*' -C "$DEPOT" remote get-url origin 2>/dev/null)
   # Onyxia produit parfois « https:///jeton@github.com/... » (trois barres)
   URL_SANS_JETON=$(echo "$URL" | sed -E 's#^https://+[^/@]*@#https://#')
   if [ -n "$URL" ] && [ "$URL" != "$URL_SANS_JETON" ]; then
-    en_onyxia "git -C '$DEPOT' remote set-url origin '$URL_SANS_JETON'"
-    echo "[init] Jeton retiré de l'adresse du dépôt $(basename "$DEPOT")."
+    if git -c safe.directory='*' -C "$DEPOT" remote set-url origin "$URL_SANS_JETON"; then
+      echo "[init] Jeton retiré de l'adresse du dépôt $(basename "$DEPOT")."
+    else
+      echo "[init] ATTENTION : jeton NON retiré de l'adresse du dépôt $(basename "$DEPOT")."
+    fi
   fi
+  # Contrôle final : aucun jeton ne doit rester dans .git/config
+  grep -qE 'https://+[^/@[:space:]]+@' "$DEPOT/.git/config" \
+    && echo "[init] ATTENTION : un jeton reste dans $(basename "$DEPOT")/.git/config."
 done
 
 
@@ -199,11 +208,11 @@ if [ -z "$CLAUDE_CODE_OAUTH_TOKEN" ] && [ -r /etc/environment ]; then
 fi
 BASHRC
 
-case "$CLAUDE_CODE_OAUTH_TOKEN" in
-  sk-ant-oat*) echo "[init] Jeton Claude présent : connexion automatique." ;;
-  "")          echo "[init] Pas de jeton Claude : connexion manuelle au premier lancement." ;;
-  *)           echo "[init] Jeton Claude mal formé (doit commencer par sk-ant-oat) : refaire claude setup-token." ;;
-esac
+if [ -n "$CLAUDE_CODE_OAUTH_TOKEN" ]; then
+  echo "[init] Jeton Claude présent (${#CLAUDE_CODE_OAUTH_TOKEN} caractères) : connexion automatique."
+else
+  echo "[init] Pas de jeton Claude : connexion manuelle au premier lancement."
+fi
 
 
 # 5 ###########################################################################
