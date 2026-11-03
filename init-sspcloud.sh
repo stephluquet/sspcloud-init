@@ -8,19 +8,13 @@
 #
 # Ce que fait le script :
 #   0. retire le jeton GitHub des adresses de dépôts (il reste dans Onyxia) ;
-#   1. ouvre le .Rproj du projet cloné s'il en contient un,
-#      ou le crée si l'argument rproj est donné ;
+#   1. ouvre le projet RStudio du dépôt cloné (onglet Git), en créant
+#      le .Rproj s'il n'existe pas (exclu de Git localement) ;
 #   2. applique mes préférences RStudio ;
 #   3. installe les packages listés dans packages.txt (racine du projet) ;
 #   4. installe Claude Code ;
 #   5. clone mon dépôt privé de skills et le relie à Claude Code.
 # =============================================================================
-
-# --- Argument facultatif (champ des arguments du script dans l'onglet Init) ----
-#   rproj : crée le projet RStudio s'il n'existe pas encore (nouveau projet R)
-#   (sans argument : le .Rproj est ouvert s'il existe, rien n'est créé sinon)
-CREER_RPROJ="no"
-[ "$1" = "rproj" ] && CREER_RPROJ="yes"
 
 # --- À personnaliser ---------------------------------------------------------
 DEPOT_SKILLS="mes-skills"    # dépôt privé de skills (laisser vide pour ignorer)
@@ -70,30 +64,55 @@ done
 
 
 # 1 ###########################################################################
-# Ouverture automatique du projet RStudio, uniquement si le dépôt cloné
-# contient déjà un fichier .Rproj (un projet non R n'est pas touché),
-# et options de la console R
+# Ouverture automatique du projet RStudio du dépôt cloné, et options de la
+# console R. RStudio n'affiche l'onglet Git que dans un projet : le .Rproj est
+# donc créé s'il n'existe pas, même pour un dépôt vide ou non R.
 # -----------------------------------------------------------------------------
 
 SUBDIR=$(basename "$(ls -d "$WORK_DIR"/*/ 2>/dev/null | grep -v "/$DEPOT_SKILLS/" | head -n 1)")
 RPROJ=""
 if [ -n "$SUBDIR" ]; then
-  RPROJ=$(ls "$WORK_DIR/$SUBDIR"/*.Rproj 2>/dev/null | head -n 1)
-fi
+  DOSSIER_PROJET="$WORK_DIR/$SUBDIR"
+  RPROJ=$(ls "$DOSSIER_PROJET"/*.Rproj 2>/dev/null | head -n 1)
 
-# Nouveau projet R demandé (argument rproj) : RStudio créera le .Rproj
-# en ouvrant le dossier ; .Rproj.user/ est exclu de Git d'avance.
-if [ -z "$RPROJ" ] && [ "$CREER_RPROJ" = "yes" ] && [ -n "$SUBDIR" ]; then
-  RPROJ="$WORK_DIR/$SUBDIR"
-  grep -qx '.Rproj.user/' "$WORK_DIR/$SUBDIR/.gitignore" 2>/dev/null \
-    || echo '.Rproj.user/' >> "$WORK_DIR/$SUBDIR/.gitignore"
-  chown onyxia:users "$WORK_DIR/$SUBDIR/.gitignore" 2>/dev/null
-  echo "[init] Argument rproj : création du projet RStudio $SUBDIR"
+  # Fichiers propres à RStudio exclus de Git localement (.git/info/exclude) :
+  # le dépôt et son .gitignore ne sont pas modifiés.
+  EXCLUSIONS=".Rproj.user/"
+  if [ -z "$RPROJ" ]; then
+    RPROJ="$DOSSIER_PROJET/$SUBDIR.Rproj"
+    cat > "$RPROJ" << 'RPROJ'
+Version: 1.0
+
+RestoreWorkspace: No
+SaveWorkspace: No
+AlwaysSaveHistory: No
+
+EnableCodeIndexing: Yes
+UseSpacesForTab: Yes
+NumSpacesForTab: 2
+Encoding: UTF-8
+
+RnwWeave: Sweave
+LaTeX: pdfLaTeX
+RPROJ
+    chown onyxia:users "$RPROJ" 2>/dev/null
+    EXCLUSIONS="$EXCLUSIONS $(basename "$RPROJ")"
+    echo "[init] Projet RStudio $(basename "$RPROJ") créé (exclu de Git localement)."
+  fi
+
+  if [ -d "$DOSSIER_PROJET/.git" ]; then
+    mkdir -p "$DOSSIER_PROJET/.git/info"
+    for MOTIF in $EXCLUSIONS; do
+      grep -qxF "$MOTIF" "$DOSSIER_PROJET/.git/info/exclude" 2>/dev/null \
+        || echo "$MOTIF" >> "$DOSSIER_PROJET/.git/info/exclude"
+    done
+    chown -R onyxia:users "$DOSSIER_PROJET/.git/info" 2>/dev/null
+  fi
 fi
 
 # R ne lit qu'UN seul .Rprofile : celui du dossier courant masque ~/.Rprofile.
-# On charge ce dernier SAUF son ouverture du projet par Onyxia, qui créerait
-# un .Rproj dans tout dépôt cloné : l'ouverture est gérée ci-dessous.
+# On charge ce dernier SAUF son ouverture du projet par Onyxia :
+# l'ouverture (et la création du .Rproj) est gérée ci-dessus et ci-dessous.
 cat >> "$WORK_DIR/.Rprofile" << 'RPROFILE'
 if (file.exists('~/.Rprofile')) {
   lignes <- readLines('~/.Rprofile', warn = FALSE)
@@ -114,7 +133,7 @@ setHook('rstudio.sessionInit', function(newSession) {
 }, action = 'append')
 RPROFILE
 else
-  echo "[init] Pas de fichier .Rproj dans le projet : pas d'ouverture automatique (argument rproj pour le créer)."
+  echo "[init] Aucun dépôt cloné : pas de projet RStudio à ouvrir."
 fi
 
 cat >> "$WORK_DIR/.Rprofile" << 'RPROFILE'

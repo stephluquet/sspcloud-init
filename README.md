@@ -7,7 +7,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 ## Ce que fait le script
 
 0. Retire le jeton GitHub des adresses de dépôts clonés par Onyxia (il serait sinon écrit en clair dans `.git/config`) ; Git le lit à la volée dans `GIT_PERSONAL_ACCESS_TOKEN`.
-1. Ouvre automatiquement le `.Rproj` du projet cloné au lancement du service, s’il existe. Avec l’argument `rproj`, le crée pour un nouveau projet R (et exclut `.Rproj.user/` de Git). Sans argument, aucun `.Rproj` n’est créé (l’ouverture de projet faite par Onyxia, qui en créerait un, est neutralisée).
+1. Ouvre automatiquement le projet RStudio du dépôt cloné au lancement du service, pour avoir l’onglet Git (RStudio ne l’affiche que dans un projet). Si le dépôt n’a pas de `.Rproj` (dépôt vide, projet non R…), il est créé et exclu de Git localement via `.git/info/exclude`, comme `.Rproj.user/` : le dépôt et son `.gitignore` ne sont pas modifiés. Pour versionner ce `.Rproj`, le retirer de `.git/info/exclude`.
 2. Applique mes préférences RStudio (pipe natif, pas de sauvegarde du workspace, thème sombre…).
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
 4. Installe **Claude Code** (thème automatique, connexion par le jeton Vault s’il est fourni).
@@ -27,7 +27,7 @@ Dans la configuration du service RStudio, avant de le lancer :
 
 | Onglet | Réglage |
 | --- | --- |
-| Init | Script personnel : `https://raw.githubusercontent.com/stephluquet/sspcloud-init/main/init-sspcloud.sh` ; argument `rproj` pour créer le projet RStudio d’un nouveau projet R |
+| Init | Script personnel : `https://raw.githubusercontent.com/stephluquet/sspcloud-init/main/init-sspcloud.sh` (aucun argument) |
 | Git | Adresse HTTPS du dépôt du projet à cloner |
 | Ressources | Au moins 4 Go de RAM (minimum pour Claude Code) |
 
