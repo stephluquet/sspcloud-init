@@ -51,7 +51,8 @@ chown onyxia:users /home/onyxia/.gitconfig 2>/dev/null
 for DEPOT in "$WORK_DIR"/*/; do
   [ -d "$DEPOT/.git" ] || continue
   URL=$(en_onyxia "git -C '$DEPOT' remote get-url origin" 2>/dev/null)
-  URL_SANS_JETON=$(echo "$URL" | sed -E 's#^https://[^/@]+@#https://#')
+  # Onyxia produit parfois « https:///jeton@github.com/... » (trois barres)
+  URL_SANS_JETON=$(echo "$URL" | sed -E 's#^https://+[^/@]*@#https://#')
   if [ -n "$URL" ] && [ "$URL" != "$URL_SANS_JETON" ]; then
     en_onyxia "git -C '$DEPOT' remote set-url origin '$URL_SANS_JETON'"
     echo "[init] Jeton retiré de l'adresse du dépôt $(basename "$DEPOT")."
@@ -80,6 +81,12 @@ if [ -z "$RPROJ" ] && [ "$CREER_RPROJ" = "yes" ] && [ -n "$SUBDIR" ]; then
   chown onyxia:users "$WORK_DIR/$SUBDIR/.gitignore" 2>/dev/null
   echo "[init] Argument rproj : création du projet RStudio $SUBDIR"
 fi
+
+# R ne lit qu'UN seul .Rprofile : celui du dossier courant masque ~/.Rprofile,
+# où Onyxia place sa propre ouverture du projet. On le charge donc d'abord.
+cat >> "$WORK_DIR/.Rprofile" << 'RPROFILE'
+if (file.exists('~/.Rprofile')) source('~/.Rprofile')
+RPROFILE
 
 if [ -n "$RPROJ" ]; then
   echo "[init] Ouverture automatique du projet $(basename "$RPROJ")"
