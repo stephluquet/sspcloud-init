@@ -38,8 +38,13 @@ en_onyxia() {
 # dans la variable GIT_PERSONAL_ACCESS_TOKEN, sans jamais l'écrire nulle part.
 # -----------------------------------------------------------------------------
 
+#
+# La valeur vide efface d'abord, pour github.com, les helpers déjà déclarés
+# (cache de /etc/gitconfig et d'Onyxia) : sinon Git leur confierait le jeton
+# après chaque authentification réussie, gardé en mémoire jusqu'à une heure.
 AIDE_GIT='!f() { test "$1" = get && echo username=x-access-token && echo "password=${GIT_PERSONAL_ACCESS_TOKEN}"; }; f'
-git config --file /home/onyxia/.gitconfig "credential.https://github.com.helper" "$AIDE_GIT"
+git config --file /home/onyxia/.gitconfig --replace-all "credential.https://github.com.helper" ""
+git config --file /home/onyxia/.gitconfig --add "credential.https://github.com.helper" "$AIDE_GIT"
 chown onyxia:users /home/onyxia/.gitconfig 2>/dev/null
 
 # Onyxia lance ce script en root, AVANT de rendre le dépôt à onyxia (chown fait
