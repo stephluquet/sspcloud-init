@@ -7,6 +7,7 @@
 # d'adresse interne ni de donnée.
 #
 # Ce que fait le script :
+#   0. retire le jeton GitHub des adresses de dépôts (il reste dans Onyxia) ;
 #   1. ouvre le .Rproj du projet cloné s'il en contient un,
 #      ou le crée si l'argument rproj est donné ;
 #   2. applique mes préférences RStudio ;
@@ -33,6 +34,29 @@ WORK_DIR="${WORKSPACE_DIR:-/home/onyxia/work}"
 en_onyxia() {
   if [ "$(id -un)" = "onyxia" ]; then bash -c "$1"; else su - onyxia -c "$1"; fi
 }
+
+
+# 0 ###########################################################################
+# Git sans jeton écrit dans les fichiers
+# Onyxia clone le projet avec le jeton dans l'adresse du dépôt : il se retrouve
+# en clair dans .git/config, lisible par tout programme (Claude Code compris).
+# On retire le jeton des adresses et on configure Git pour le lire à la volée
+# dans la variable GIT_PERSONAL_ACCESS_TOKEN, sans jamais l'écrire nulle part.
+# -----------------------------------------------------------------------------
+
+AIDE_GIT='!f() { test "$1" = get && echo username=x-access-token && echo "password=${GIT_PERSONAL_ACCESS_TOKEN}"; }; f'
+git config --file /home/onyxia/.gitconfig "credential.https://github.com.helper" "$AIDE_GIT"
+chown onyxia:users /home/onyxia/.gitconfig 2>/dev/null
+
+for DEPOT in "$WORK_DIR"/*/; do
+  [ -d "$DEPOT/.git" ] || continue
+  URL=$(en_onyxia "git -C '$DEPOT' remote get-url origin" 2>/dev/null)
+  URL_SANS_JETON=$(echo "$URL" | sed -E 's#^https://[^/@]+@#https://#')
+  if [ -n "$URL" ] && [ "$URL" != "$URL_SANS_JETON" ]; then
+    en_onyxia "git -C '$DEPOT' remote set-url origin '$URL_SANS_JETON'"
+    echo "[init] Jeton retiré de l'adresse du dépôt $(basename "$DEPOT")."
+  fi
+done
 
 
 # 1 ###########################################################################
@@ -174,13 +198,10 @@ if [ -n "$DEPOT_SKILLS" ] && [ -n "$GITHUB_COMPTE" ]; then
   URL_PROPRE="https://github.com/$GITHUB_COMPTE/$DEPOT_SKILLS.git"
 
   if [ ! -d "$DOSSIER_SKILLS" ]; then
-    if [ -n "$GIT_PERSONAL_ACCESS_TOKEN" ]; then
-      echo "[init] Clonage du dépôt de skills..."
-      en_onyxia "git clone -q https://x-access-token:${GIT_PERSONAL_ACCESS_TOKEN}@github.com/$GITHUB_COMPTE/$DEPOT_SKILLS.git '$DOSSIER_SKILLS'" \
-        && en_onyxia "git -C '$DOSSIER_SKILLS' remote set-url origin '$URL_PROPRE'" \
-        && echo "[init] Skills clonés." \
-        || echo "[init] Clonage des skills impossible (jeton ou nom de dépôt ?)."
-    fi
+    echo "[init] Clonage du dépôt de skills..."
+    en_onyxia "git clone -q '$URL_PROPRE' '$DOSSIER_SKILLS'" \
+      && echo "[init] Skills clonés." \
+      || echo "[init] Clonage des skills impossible (jeton ou nom de dépôt ?)."
   fi
 
   if [ -d "$DOSSIER_SKILLS" ]; then
