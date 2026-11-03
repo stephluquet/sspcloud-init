@@ -218,16 +218,16 @@ else
 fi
 chown onyxia:users "$FICHIER_CLAUDE" 2>/dev/null
 
-# Modèle par défaut : Opus (équivalent de /model, perdu à chaque nouveau service).
-REGLAGES_CLAUDE=/home/onyxia/.claude/settings.json
-mkdir -p /home/onyxia/.claude
-if [ -f "$REGLAGES_CLAUDE" ] && command -v jq > /dev/null; then
-  jq '.model = "opus"' "$REGLAGES_CLAUDE" > "$REGLAGES_CLAUDE.tmp" \
-    && mv "$REGLAGES_CLAUDE.tmp" "$REGLAGES_CLAUDE"
-else
-  echo '{"model": "opus"}' > "$REGLAGES_CLAUDE"
-fi
-chown -R onyxia:users /home/onyxia/.claude 2>/dev/null
+# Modèle par défaut : Opus, ou celui passé en argument du script dans le lanceur
+# (ex. « sonnet », « haiku », « claude-opus-5-5 »). Posé via ANTHROPIC_MODEL dans le
+# .bashrc : plus fiable qu'un settings.json, et /model ou --model restent possibles.
+MODELE_CLAUDE="${1:-opus}"
+case "$MODELE_CLAUDE" in
+  *[!A-Za-z0-9._-]*) echo "[init] Modèle « $MODELE_CLAUDE » invalide : opus utilisé."; MODELE_CLAUDE=opus ;;
+esac
+sed -i '/ANTHROPIC_MODEL/d' /home/onyxia/.bashrc 2>/dev/null
+echo "export ANTHROPIC_MODEL=$MODELE_CLAUDE  # modèle Claude Code (voir init-sspcloud.sh)" >> /home/onyxia/.bashrc
+echo "[init] Modèle Claude Code par défaut : $MODELE_CLAUDE."
 
 # Connexion par le jeton CLAUDE_CODE_OAUTH_TOKEN (généré par `claude setup-token`),
 # rangé dans un secret Vault d'Onyxia. Onyxia ne le transmet qu'à R
