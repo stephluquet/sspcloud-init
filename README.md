@@ -6,6 +6,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 
 ## Ce que fait le script
 
+0. Retire le jeton GitHub des adresses de dépôts clonés par Onyxia (il serait sinon écrit en clair dans `.git/config`) ; Git le lit à la volée dans `GIT_PERSONAL_ACCESS_TOKEN`.
 1. Ouvre automatiquement le `.Rproj` du projet cloné au lancement du service, s’il existe. Avec l’argument `rproj`, le crée pour un nouveau projet R (et exclut `.Rproj.user/` de Git). Sans argument, rien n’est créé pour un projet non R.
 2. Applique mes préférences RStudio (pipe natif, pas de sauvegarde du workspace, thème sombre…).
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
