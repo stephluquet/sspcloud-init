@@ -45,7 +45,7 @@ claude          # sans jeton Vault : connexion avec le compte Claude au premier 
 /agents         # dans Claude Code : les six agents dr20-sed:sed-* doivent apparaître
 ```
 
-Pour une étude, lancer `claude` depuis le dossier du projet : l'équipe est déjà active, Claude demande seulement « suivi continu ou pas à pas ? » à la première tâche. Pour régler autrement une étude (contexte perso, charte libre…), copier `sed-equipe/modele-projet/CLAUDE.md` à la racine du projet et n'y garder que les lignes du « Cadre » à changer. La conversation principale est l'orchestrateur ; chaque rôle tourne comme agent avec son modèle. Le travail est rangé dans le projet (`suivi/`, `scripts/`, `output/`, `a_partager/`) et se pousse par l'onglet Git de RStudio.
+Pour une étude, lancer `claude` depuis le dossier du projet : l'équipe est déjà active, Claude demande seulement « suivi continu ou pas à pas ? » à la première tâche. Pour régler autrement une étude (contexte perso, charte libre…), copier `dr20-sed/modele-projet/CLAUDE.md` à la racine du projet et n'y garder que les lignes du « Cadre » à changer. La conversation principale est l'orchestrateur ; chaque rôle tourne comme agent avec son modèle. Le travail est rangé dans le projet (`suivi/`, `scripts/`, `output/`, `a_partager/`) et se pousse par l'onglet Git de RStudio.
 
 En cas de problème, les lignes `[init]` des journaux du service disent quelle étape a échoué ; le détail de l'installation de l'équipe est dans `/tmp/init-sed.log`.
 
