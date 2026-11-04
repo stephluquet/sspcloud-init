@@ -20,8 +20,21 @@
 # --- À personnaliser ---------------------------------------------------------
 MARKETPLACE_SED="stephluquet/sspcloud-skills"  # dépôt privé (marketplace Claude Code)
 PLUGIN_SED="sed-equipe@sspcloud-skills"        # plugin de l'équipe (laisser vide pour ignorer)
-LIBREOFFICE="non"   # « oui » : installe LibreOffice (communicant : .ods, .odp ; ~5 min de plus)
 # -----------------------------------------------------------------------------
+
+# Arguments du lanceur Onyxia (onglet Init), dans n'importe quel ordre, séparés
+# par des espaces : « libreoffice » installe LibreOffice (communicant : .ods,
+# .odp ; quelques minutes de plus) ; tout autre mot est le modèle Claude Code
+# (ex. « sonnet », « claude-opus-5-5 »). Exemples : « libreoffice »,
+# « sonnet libreoffice ». Sans argument : Opus, pas de LibreOffice.
+LIBREOFFICE="non"
+MODELE_ARG=""
+for ARG in $*; do
+  case "${ARG,,}" in
+    libreoffice) LIBREOFFICE="oui" ;;
+    *) MODELE_ARG="$ARG" ;;
+  esac
+done
 
 WORK_DIR="${WORKSPACE_DIR:-/home/onyxia/work}"
 
@@ -219,10 +232,10 @@ else
 fi
 chown onyxia:users "$FICHIER_CLAUDE" 2>/dev/null
 
-# Modèle par défaut : Opus, ou celui passé en argument du script dans le lanceur
+# Modèle par défaut : Opus, ou celui passé en argument du lanceur (voir en tête)
 # (ex. « sonnet », « haiku », « claude-opus-5-5 »). Posé via ANTHROPIC_MODEL dans le
 # .bashrc : plus fiable qu'un settings.json, et /model ou --model restent possibles.
-MODELE_CLAUDE="${1:-opus}"
+MODELE_CLAUDE="${MODELE_ARG:-opus}"
 case "$MODELE_CLAUDE" in
   *[!A-Za-z0-9._-]*) echo "[init] Modèle « $MODELE_CLAUDE » invalide : opus utilisé."; MODELE_CLAUDE=opus ;;
 esac
@@ -319,7 +332,7 @@ if [ "$LIBREOFFICE" = "oui" ] && ! command -v soffice > /dev/null; then
 elif command -v soffice > /dev/null; then
   echo "[init] LibreOffice présent."
 else
-  echo "[init] LibreOffice non installé (LIBREOFFICE=\"non\") : le communicant le signalera."
+  echo "[init] LibreOffice non demandé (argument « libreoffice » du lanceur) : le communicant le signalera."
 fi
 
 echo "[init] Initialisation terminée."

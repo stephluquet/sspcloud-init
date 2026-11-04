@@ -12,7 +12,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
 4. Installe **Claude Code** (modèle Opus par défaut, ou celui passé en argument du script ; thème automatique, connexion par le jeton Vault s’il est fourni).
 5. Installe l'**équipe SED** : plugin `sed-equipe` (skills et six agents de rôle) depuis la marketplace privée `stephluquet/sspcloud-skills`, avec le jeton GitHub d'Onyxia. Autorise aussi les agents à lire `~/.claude/plugins` (réglage utilisateur de Claude Code). `~/.claude` n'étant pas conservé entre deux services, le plugin est réinstallé à chaque lancement, donc toujours à jour avec `main`.
-6. Installe LibreOffice si `LIBREOFFICE="oui"` (communicant : fichier des figures `.ods`, diaporamas `.odp`). Désactivé par défaut : quelques minutes de plus au lancement.
+6. Installe LibreOffice si l'argument `libreoffice` est passé au lanceur (communicant : fichier des figures `.ods`, diaporamas `.odp`). Désactivé par défaut : quelques minutes de plus au lancement.
 
 Chaque étape écrit une ligne commençant par `[init]` dans les journaux du service, pour repérer facilement un éventuel problème.
 
@@ -20,7 +20,7 @@ Chaque étape écrit une ligne commençant par `[init]` dans les journaux du ser
 
 - **Jeton GitHub** renseigné dans Onyxia : *Mon compte* → *Git* → *Token d'accès personnel*. Il est injecté dans les services sous le nom `GIT_PERSONAL_ACCESS_TOKEN` et sert à lire le dépôt privé `sspcloud-skills` (plugin de l'équipe SED) : il doit donc y avoir accès en lecture. À renouveler avant son expiration.
 - **Jeton Claude** (facultatif, évite la connexion à chaque service) : généré une fois avec `claude setup-token`, rangé dans un secret Vault d'Onyxia sous le nom `CLAUDE_CODE_OAUTH_TOKEN`, et injecté dans le service (onglet Vault de sa configuration). Copier la valeur **entière** affichée par `claude setup-token` (attention aux retours à la ligne du terminal). Pour vérifier un jeton : `CLAUDE_CODE_OAUTH_TOKEN='…' claude -p ok` doit répondre au lieu d’afficher `401 Invalid bearer token`. Ne jamais l'écrire dans ce dépôt.
-- **Variables** en haut de `init-sspcloud.sh` : `MARKETPLACE_SED` et `PLUGIN_SED` (plugin de l'équipe SED ; laisser `PLUGIN_SED` vide pour ne pas l'installer), `LIBREOFFICE` (`oui` ou `non`).
+- **Variables** en haut de `init-sspcloud.sh` : `MARKETPLACE_SED` et `PLUGIN_SED` (plugin de l'équipe SED ; laisser `PLUGIN_SED` vide pour ne pas l'installer).
 
 ## Utilisation dans Onyxia
 
@@ -28,7 +28,7 @@ Dans la configuration du service RStudio, avant de le lancer :
 
 | Onglet | Réglage |
 | --- | --- |
-| Init | Script personnel : `https://raw.githubusercontent.com/stephluquet/sspcloud-init/main/init-sspcloud.sh` (argument facultatif : modèle Claude Code, ex. `sonnet` ; Opus par défaut) |
+| Init | Script personnel : `https://raw.githubusercontent.com/stephluquet/sspcloud-init/main/init-sspcloud.sh` (arguments facultatifs, séparés par des espaces, dans n'importe quel ordre : un modèle Claude Code, ex. `sonnet`, Opus par défaut ; `libreoffice` pour installer LibreOffice. Ex. : `libreoffice` ou `sonnet libreoffice`) |
 | Git | Adresse HTTPS du dépôt du projet à cloner |
 | Ressources | Au moins 4 Go de RAM (minimum pour Claude Code) |
 
