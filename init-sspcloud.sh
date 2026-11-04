@@ -15,7 +15,8 @@
 #   4. installe Claude Code ;
 #   5. installe l'équipe SED (plugin sed-equipe : skills et agents) et
 #      pose son cadre dans ~/.claude/CLAUDE.md ;
-#   6. installe LibreOffice si demandé (figures .ods et diaporamas .odp) ;
+#   6. installe les modules Python des outils de l'équipe, et LibreOffice si
+#      demandé (figures .ods et diaporamas .odp) ;
 #   7. restaure le travail de l'étude depuis S3 (suivi/, output/, a_partager/).
 # =============================================================================
 
@@ -331,23 +332,49 @@ fi
 
 
 # 6 ###########################################################################
-# LibreOffice (facultatif) : le communicant en a besoin pour le fichier des
-# figures (.ods) et les diaporamas (.odp). Long à installer : désactivé par défaut.
+# Dépendances des outils de l'équipe SED
+# - modules Python pandas, openpyxl et odf (tableau de bord, lecture des
+#   classeurs, figures), toujours, seulement s'ils manquent : paquets Ubuntu pour
+#   le Python du système, pip pour un autre Python (image « r-python ») ;
+# - LibreOffice (communicant : .ods, .odp), sur l'argument « libreoffice ».
+# Pandoc est fourni par l'image RStudio.
 # -----------------------------------------------------------------------------
 
+MODULES_MANQUANTS=""
+for MODULE in pandas openpyxl odf; do
+  python3 -c "import $MODULE" 2>/dev/null || MODULES_MANQUANTS="$MODULES_MANQUANTS $MODULE"
+done
+PAQUETS_APT=""
+if [ -n "$MODULES_MANQUANTS" ]; then
+  if [ "$(readlink -f "$(command -v python3)")" = "$(readlink -f /usr/bin/python3)" ]; then
+    for MODULE in $MODULES_MANQUANTS; do PAQUETS_APT="$PAQUETS_APT python3-$MODULE"; done
+  else
+    NOMS_PIP=$(echo "$MODULES_MANQUANTS" | sed 's/\bodf\b/odfpy/')
+    python3 -m pip install -q $NOMS_PIP > /dev/null 2>&1 \
+      && echo "[init] Modules Python installés par pip :$MODULES_MANQUANTS." \
+      || echo "[init] Installation par pip impossible :$MODULES_MANQUANTS (tableau de bord et classeurs indisponibles)."
+  fi
+fi
 if [ "$LIBREOFFICE" = "oui" ] && ! command -v soffice > /dev/null; then
-  echo "[init] Installation de LibreOffice..."
+  PAQUETS_APT="$PAQUETS_APT libreoffice-calc libreoffice-impress"
+fi
+
+if [ -n "$PAQUETS_APT" ]; then
+  echo "[init] Installation des paquets :$PAQUETS_APT..."
   if [ "$(id -u)" = "0" ] \
      && apt-get update -qq > /dev/null \
-     && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
-          libreoffice-calc libreoffice-impress > /dev/null; then
-    echo "[init] LibreOffice installé."
+     && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends $PAQUETS_APT > /dev/null; then
+    echo "[init] Paquets installés."
   else
-    echo "[init] Installation de LibreOffice impossible."
+    echo "[init] Installation des paquets impossible :$PAQUETS_APT."
   fi
-elif command -v soffice > /dev/null; then
+elif [ -z "$MODULES_MANQUANTS" ]; then
+  echo "[init] Modules Python de l'équipe présents."
+fi
+
+if command -v soffice > /dev/null; then
   echo "[init] LibreOffice présent."
-else
+elif [ "$LIBREOFFICE" != "oui" ]; then
   echo "[init] LibreOffice non demandé (argument « libreoffice » du lanceur) : le communicant le signalera."
 fi
 
