@@ -13,14 +13,15 @@
 #   2. applique mes préférences RStudio ;
 #   3. installe les packages listés dans packages.txt (racine du projet) ;
 #   4. installe Claude Code ;
-#   5. clone mon dépôt privé de skills et le relie à Claude Code.
+#   5. installe l'équipe SED (plugin sed-equipe : skills et agents) ;
+#   6. installe LibreOffice si demandé (figures .ods et diaporamas .odp).
 # =============================================================================
 
 # --- À personnaliser ---------------------------------------------------------
-DEPOT_SKILLS="mes-skills"    # dépôt privé de skills (laisser vide pour ignorer)
+MARKETPLACE_SED="stephluquet/sspcloud-skills"  # dépôt privé (marketplace Claude Code)
+PLUGIN_SED="sed-equipe@sspcloud-skills"        # plugin de l'équipe (laisser vide pour ignorer)
+LIBREOFFICE="non"   # « oui » : installe LibreOffice (communicant : .ods, .odp ; ~5 min de plus)
 # -----------------------------------------------------------------------------
-# L'identifiant GitHub n'est pas écrit ici : il est retrouvé à partir du jeton
-# fourni par Onyxia (Mon compte > Git), sans jamais afficher ce jeton.
 
 WORK_DIR="${WORKSPACE_DIR:-/home/onyxia/work}"
 
@@ -74,7 +75,7 @@ done
 # donc créé s'il n'existe pas, même pour un dépôt vide ou non R.
 # -----------------------------------------------------------------------------
 
-SUBDIR=$(basename "$(ls -d "$WORK_DIR"/*/ 2>/dev/null | grep -v "/$DEPOT_SKILLS/" | head -n 1)")
+SUBDIR=$(basename "$(ls -d "$WORK_DIR"/*/ 2>/dev/null | head -n 1)")
 RPROJ=""
 if [ -n "$SUBDIR" ]; then
   DOSSIER_PROJET="$WORK_DIR/$SUBDIR"
@@ -251,38 +252,74 @@ fi
 
 
 # 5 ###########################################################################
-# Skills personnels : dépôt privé cloné avec le jeton fourni par Onyxia
-# (Mon compte > Git > Token d'accès personnel), puis relié à ~/.claude/skills
+# Équipe SED : plugin sed-equipe (skills et six agents de rôle)
+# La marketplace est le dépôt privé stephluquet/sspcloud-skills : Git le lit
+# avec le jeton GitHub d'Onyxia, par l'aide configurée à l'étape 0. Le jeton
+# est passé à Claude Code par l'entrée standard, jamais en argument ni en
+# fichier. ~/.claude n'étant pas conservé entre deux services, le plugin est
+# réinstallé à chaque lancement : c'est donc toujours la dernière version de main.
 # -----------------------------------------------------------------------------
 
-GITHUB_COMPTE=""
-if [ -n "$GIT_PERSONAL_ACCESS_TOKEN" ]; then
-  GITHUB_COMPTE=$(curl -s -H "Authorization: Bearer $GIT_PERSONAL_ACCESS_TOKEN" \
-                  https://api.github.com/user \
-                  | grep -m1 '"login"' | sed 's/.*"login": *"\([^"]*\)".*/\1/')
+CLAUDE_BIN=/home/onyxia/.local/bin/claude
+
+# Dans le terminal, les agents lisent les fichiers de référence des skills
+# dans ~/.claude/plugins : autorisation donnée une fois pour tous les projets.
+FICHIER_REGLAGES=/home/onyxia/.claude/settings.json
+mkdir -p /home/onyxia/.claude
+if [ -f "$FICHIER_REGLAGES" ] && command -v jq > /dev/null; then
+  jq '.permissions.additionalDirectories = ((.permissions.additionalDirectories // []) + ["~/.claude/plugins"] | unique)' \
+    "$FICHIER_REGLAGES" > "$FICHIER_REGLAGES.tmp" && mv "$FICHIER_REGLAGES.tmp" "$FICHIER_REGLAGES"
+elif [ ! -f "$FICHIER_REGLAGES" ]; then
+  echo '{"permissions": {"additionalDirectories": ["~/.claude/plugins"]}}' > "$FICHIER_REGLAGES"
+else
+  echo "[init] jq absent : ajouter ~/.claude/plugins à permissions.additionalDirectories de $FICHIER_REGLAGES."
+fi
+chown -R onyxia:users /home/onyxia/.claude 2>/dev/null
+
+if [ -z "$PLUGIN_SED" ]; then
+  echo "[init] Équipe SED non demandée."
+elif [ ! -x "$CLAUDE_BIN" ]; then
+  echo "[init] Claude Code absent : équipe SED non installée."
+elif [ -z "$GIT_PERSONAL_ACCESS_TOKEN" ]; then
+  echo "[init] Jeton GitHub absent (Onyxia > Mon compte > Git) : équipe SED non installée."
+else
+  echo "[init] Installation de l'équipe SED ($PLUGIN_SED)..."
+  COMMANDE_SED="read -r GIT_PERSONAL_ACCESS_TOKEN; export GIT_PERSONAL_ACCESS_TOKEN; cd /home/onyxia; \
+    { '$CLAUDE_BIN' plugin marketplace add '$MARKETPLACE_SED' || '$CLAUDE_BIN' plugin marketplace update '${PLUGIN_SED#*@}'; } \
+    && '$CLAUDE_BIN' plugin install '$PLUGIN_SED'"
+  if [ "$(id -un)" = "onyxia" ]; then
+    printf '%s\n' "$GIT_PERSONAL_ACCESS_TOKEN" | bash -c "$COMMANDE_SED" > /tmp/init-sed.log 2>&1
+  else
+    printf '%s\n' "$GIT_PERSONAL_ACCESS_TOKEN" | su - onyxia -c "$COMMANDE_SED" > /tmp/init-sed.log 2>&1
+  fi
+  if [ $? -eq 0 ]; then
+    echo "[init] Équipe SED installée : agents sed-equipe:sed-* disponibles dans Claude Code."
+  else
+    echo "[init] Installation de l'équipe SED impossible (détail : /tmp/init-sed.log) :"
+    sed 's/^/[init]   /' /tmp/init-sed.log | tail -n 5
+  fi
 fi
 
-if [ -n "$DEPOT_SKILLS" ] && [ -z "$GITHUB_COMPTE" ]; then
-  echo "[init] Compte GitHub introuvable (jeton absent ou invalide) : skills non clonés."
-fi
 
-if [ -n "$DEPOT_SKILLS" ] && [ -n "$GITHUB_COMPTE" ]; then
-  DOSSIER_SKILLS="$WORK_DIR/$DEPOT_SKILLS"
-  URL_PROPRE="https://github.com/$GITHUB_COMPTE/$DEPOT_SKILLS.git"
+# 6 ###########################################################################
+# LibreOffice (facultatif) : le communicant en a besoin pour le fichier des
+# figures (.ods) et les diaporamas (.odp). Long à installer : désactivé par défaut.
+# -----------------------------------------------------------------------------
 
-  if [ ! -d "$DOSSIER_SKILLS" ]; then
-    echo "[init] Clonage du dépôt de skills..."
-    en_onyxia "git clone -q '$URL_PROPRE' '$DOSSIER_SKILLS'" \
-      && echo "[init] Skills clonés." \
-      || echo "[init] Clonage des skills impossible (jeton ou nom de dépôt ?)."
+if [ "$LIBREOFFICE" = "oui" ] && ! command -v soffice > /dev/null; then
+  echo "[init] Installation de LibreOffice..."
+  if [ "$(id -u)" = "0" ] \
+     && apt-get update -qq > /dev/null \
+     && DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --no-install-recommends \
+          libreoffice-calc libreoffice-impress > /dev/null; then
+    echo "[init] LibreOffice installé."
+  else
+    echo "[init] Installation de LibreOffice impossible."
   fi
-
-  if [ -d "$DOSSIER_SKILLS" ]; then
-    mkdir -p /home/onyxia/.claude
-    ln -sfn "$DOSSIER_SKILLS" /home/onyxia/.claude/skills
-    chown -R onyxia:users /home/onyxia/.claude 2>/dev/null
-    echo "[init] Skills reliés à Claude Code."
-  fi
+elif command -v soffice > /dev/null; then
+  echo "[init] LibreOffice présent."
+else
+  echo "[init] LibreOffice non installé (LIBREOFFICE=\"non\") : le communicant le signalera."
 fi
 
 echo "[init] Initialisation terminée."

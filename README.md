@@ -11,15 +11,16 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 2. Applique mes préférences RStudio (pipe natif, pas de sauvegarde du workspace, thème sombre…).
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
 4. Installe **Claude Code** (modèle Opus par défaut, ou celui passé en argument du script ; thème automatique, connexion par le jeton Vault s’il est fourni).
-5. Clone mon dépôt privé de skills et le relie à Claude Code (`~/.claude/skills`).
+5. Installe l'**équipe SED** : plugin `sed-equipe` (skills et six agents de rôle) depuis la marketplace privée `stephluquet/sspcloud-skills`, avec le jeton GitHub d'Onyxia. Autorise aussi les agents à lire `~/.claude/plugins` (réglage utilisateur de Claude Code). `~/.claude` n'étant pas conservé entre deux services, le plugin est réinstallé à chaque lancement, donc toujours à jour avec `main`.
+6. Installe LibreOffice si `LIBREOFFICE="oui"` (communicant : fichier des figures `.ods`, diaporamas `.odp`). Désactivé par défaut : quelques minutes de plus au lancement.
 
 Chaque étape écrit une ligne commençant par `[init]` dans les journaux du service, pour repérer facilement un éventuel problème.
 
 ## Pré-requis (une fois pour toutes)
 
-- **Jeton GitHub** renseigné dans Onyxia : *Mon compte* → *Git* → *Token d'accès personnel*. Il est injecté dans les services sous le nom `GIT_PERSONAL_ACCESS_TOKEN` et sert à cloner le dépôt privé de skills. À renouveler avant son expiration.
+- **Jeton GitHub** renseigné dans Onyxia : *Mon compte* → *Git* → *Token d'accès personnel*. Il est injecté dans les services sous le nom `GIT_PERSONAL_ACCESS_TOKEN` et sert à lire le dépôt privé `sspcloud-skills` (plugin de l'équipe SED) : il doit donc y avoir accès en lecture. À renouveler avant son expiration.
 - **Jeton Claude** (facultatif, évite la connexion à chaque service) : généré une fois avec `claude setup-token`, rangé dans un secret Vault d'Onyxia sous le nom `CLAUDE_CODE_OAUTH_TOKEN`, et injecté dans le service (onglet Vault de sa configuration). Copier la valeur **entière** affichée par `claude setup-token` (attention aux retours à la ligne du terminal). Pour vérifier un jeton : `CLAUDE_CODE_OAUTH_TOKEN='…' claude -p ok` doit répondre au lieu d’afficher `401 Invalid bearer token`. Ne jamais l'écrire dans ce dépôt.
-- **Variable à personnaliser** en haut de `init-sspcloud.sh` : `DEPOT_SKILLS` (nom du dépôt privé de skills). L’identifiant GitHub est retrouvé automatiquement à partir du jeton.
+- **Variables** en haut de `init-sspcloud.sh` : `MARKETPLACE_SED` et `PLUGIN_SED` (plugin de l'équipe SED ; laisser `PLUGIN_SED` vide pour ne pas l'installer), `LIBREOFFICE` (`oui` ou `non`).
 
 ## Utilisation dans Onyxia
 
@@ -40,7 +41,12 @@ Dans le terminal RStudio :
 ```bash
 claude          # sans jeton Vault : connexion avec le compte Claude au premier lancement
 /status         # dans Claude Code : vérifier que c'est bien l'abonnement, pas une clé API
+/agents         # dans Claude Code : les six agents sed-equipe:sed-* doivent apparaître
 ```
+
+Pour une étude, copier `sed-equipe/modele-projet/` (`CLAUDE.md` et `.claude/settings.json`) à la racine du dépôt du projet, remplir le bloc « Cadre », puis lancer `claude` depuis ce dossier. La conversation principale est l'orchestrateur ; chaque rôle tourne comme agent avec son modèle. Le travail est rangé dans le projet (`suivi/`, `scripts/`, `output/`, `a_partager/`) et se pousse par l'onglet Git de RStudio.
+
+En cas de problème, les lignes `[init]` des journaux du service disent quelle étape a échoué ; le détail de l'installation de l'équipe est dans `/tmp/init-sed.log`.
 
 ## Règles d'usage
 
