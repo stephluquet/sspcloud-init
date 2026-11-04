@@ -13,7 +13,7 @@
 #   2. applique mes préférences RStudio ;
 #   3. installe les packages listés dans packages.txt (racine du projet) ;
 #   4. installe Claude Code ;
-#   5. installe l'équipe SED (plugin sed-equipe : skills et agents) et
+#   5. installe l'équipe SED (plugin dr20-sed : skills dr20-sed et dr20-ressources, agents) et
 #      pose son cadre dans ~/.claude/CLAUDE.md ;
 #   6. installe les modules Python des outils de l'équipe, et LibreOffice si
 #      demandé (figures .ods et diaporamas .odp) ;
@@ -22,7 +22,7 @@
 
 # --- À personnaliser ---------------------------------------------------------
 MARKETPLACE_SED="stephluquet/sspcloud-skills"  # dépôt privé (marketplace Claude Code)
-PLUGIN_SED="sed-equipe@sspcloud-skills"        # plugin de l'équipe (laisser vide pour ignorer)
+PLUGIN_SED="dr20-sed@sspcloud-skills"        # plugin de l'équipe (laisser vide pour ignorer)
 # -----------------------------------------------------------------------------
 
 # Arguments du lanceur Onyxia (onglet Init), dans n'importe quel ordre, séparés
@@ -272,7 +272,7 @@ fi
 
 
 # 5 ###########################################################################
-# Équipe SED : plugin sed-equipe (skills et six agents de rôle)
+# Équipe SED : plugin dr20-sed (skills dr20-sed et dr20-ressources, six agents de rôle)
 # La marketplace est le dépôt privé stephluquet/sspcloud-skills : Git le lit
 # avec le jeton GitHub d'Onyxia, par l'aide configurée à l'étape 0. Le jeton
 # est passé à Claude Code par l'entrée standard, jamais en argument ni en
@@ -313,11 +313,11 @@ else
     printf '%s\n' "$GIT_PERSONAL_ACCESS_TOKEN" | su - onyxia -c "$COMMANDE_SED" > /tmp/init-sed.log 2>&1
   fi
   if [ $? -eq 0 ]; then
-    echo "[init] Équipe SED installée : agents sed-equipe:sed-* disponibles dans Claude Code."
+    echo "[init] Équipe SED installée : agents dr20-sed:sed-* disponibles dans Claude Code."
     # Cadre d'environnement : ouvrir ce service vaut demande de travailler avec
     # l'équipe ; seul le suivi (continu ou pas à pas) est demandé en début de
     # session. Un bloc « Cadre » dans le CLAUDE.md du projet l'emporte.
-    CADRE_SED=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/sed-equipe/environnement/CLAUDE.md
+    CADRE_SED=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/dr20-sed/environnement/CLAUDE.md
     if [ -f "$CADRE_SED" ]; then
       cp "$CADRE_SED" /home/onyxia/.claude/CLAUDE.md && chown onyxia:users /home/onyxia/.claude/CLAUDE.md
       echo "[init] Cadre SED posé dans ~/.claude/CLAUDE.md (suivi demandé en début de session)."
@@ -389,7 +389,7 @@ if [ -n "$S3_ARG" ]; then
   echo "export S3_SED=$S3_ARG  # bucket S3 personnel (argument du lanceur)" >> /home/onyxia/.bashrc
   export S3_SED="$S3_ARG"
 fi
-OUTIL_SAUVEGARDE=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/sed-equipe/skills/sed/outils/sauvegarde.py
+OUTIL_SAUVEGARDE=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/dr20-sed/skills/dr20-sed/sed/outils/sauvegarde.py
 if [ -n "$SUBDIR" ] && [ -f "$OUTIL_SAUVEGARDE" ] && command -v aws > /dev/null; then
   RESULTAT=$(timeout 600 python3 "$OUTIL_SAUVEGARDE" "$WORK_DIR/$SUBDIR" reprendre --plateforme sspcloud 2>&1 | tail -n 1)
   echo "[init] $RESULTAT"
