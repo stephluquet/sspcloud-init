@@ -13,7 +13,8 @@
 #   2. applique mes préférences RStudio ;
 #   3. installe les packages listés dans packages.txt (racine du projet) ;
 #   4. installe Claude Code ;
-#   5. installe l'équipe SED (plugin sed-equipe : skills et agents) ;
+#   5. installe l'équipe SED (plugin sed-equipe : skills et agents) et
+#      pose son cadre dans ~/.claude/CLAUDE.md ;
 #   6. installe LibreOffice si demandé (figures .ods et diaporamas .odp).
 # =============================================================================
 
@@ -307,6 +308,16 @@ else
   fi
   if [ $? -eq 0 ]; then
     echo "[init] Équipe SED installée : agents sed-equipe:sed-* disponibles dans Claude Code."
+    # Cadre d'environnement : ouvrir ce service vaut demande de travailler avec
+    # l'équipe ; seul le suivi (continu ou pas à pas) est demandé en début de
+    # session. Un bloc « Cadre » dans le CLAUDE.md du projet l'emporte.
+    CADRE_SED=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/sed-equipe/environnement/CLAUDE.md
+    if [ -f "$CADRE_SED" ]; then
+      cp "$CADRE_SED" /home/onyxia/.claude/CLAUDE.md && chown onyxia:users /home/onyxia/.claude/CLAUDE.md
+      echo "[init] Cadre SED posé dans ~/.claude/CLAUDE.md (suivi demandé en début de session)."
+    else
+      echo "[init] Cadre SED introuvable dans le plugin : l'équipe ne s'activera que sur un CLAUDE.md de projet."
+    fi
   else
     echo "[init] Installation de l'équipe SED impossible (détail : /tmp/init-sed.log) :"
     sed 's/^/[init]   /' /tmp/init-sed.log | tail -n 5

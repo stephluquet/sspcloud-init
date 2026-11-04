@@ -11,7 +11,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 2. Applique mes préférences RStudio (pipe natif, pas de sauvegarde du workspace, thème sombre…).
 3. Installe les packages listés dans un fichier `packages.txt` à la racine du projet, s'il existe.
 4. Installe **Claude Code** (modèle Opus par défaut, ou celui passé en argument du script ; thème automatique, connexion par le jeton Vault s’il est fourni).
-5. Installe l'**équipe SED** : plugin `sed-equipe` (skills et six agents de rôle) depuis la marketplace privée `stephluquet/sspcloud-skills`, avec le jeton GitHub d'Onyxia. Autorise aussi les agents à lire `~/.claude/plugins` (réglage utilisateur de Claude Code). `~/.claude` n'étant pas conservé entre deux services, le plugin est réinstallé à chaque lancement, donc toujours à jour avec `main`.
+5. Installe l'**équipe SED** : plugin `sed-equipe` (skills et six agents de rôle) depuis la marketplace privée `stephluquet/sspcloud-skills`, avec le jeton GitHub d'Onyxia. Autorise aussi les agents à lire `~/.claude/plugins` (réglage utilisateur de Claude Code). Pose enfin le **cadre de l'équipe** dans `~/.claude/CLAUDE.md` (contexte Insee, charte et modèle diaporama Insee appliqués, suivi demandé en début de session) : ouvrir ce service vaut demande de travailler avec l'équipe. Un bloc « Cadre » dans le `CLAUDE.md` d'un projet l'emporte, ligne par ligne. `~/.claude` n'étant pas conservé entre deux services, le plugin est réinstallé à chaque lancement, donc toujours à jour avec `main`.
 6. Installe LibreOffice si l'argument `libreoffice` est passé au lanceur (communicant : fichier des figures `.ods`, diaporamas `.odp`). Désactivé par défaut : quelques minutes de plus au lancement.
 
 Chaque étape écrit une ligne commençant par `[init]` dans les journaux du service, pour repérer facilement un éventuel problème.
@@ -44,7 +44,7 @@ claude          # sans jeton Vault : connexion avec le compte Claude au premier 
 /agents         # dans Claude Code : les six agents sed-equipe:sed-* doivent apparaître
 ```
 
-Pour une étude, copier `sed-equipe/modele-projet/` (`CLAUDE.md` et `.claude/settings.json`) à la racine du dépôt du projet, remplir le bloc « Cadre », puis lancer `claude` depuis ce dossier. La conversation principale est l'orchestrateur ; chaque rôle tourne comme agent avec son modèle. Le travail est rangé dans le projet (`suivi/`, `scripts/`, `output/`, `a_partager/`) et se pousse par l'onglet Git de RStudio.
+Pour une étude, lancer `claude` depuis le dossier du projet : l'équipe est déjà active, Claude demande seulement « suivi continu ou pas à pas ? » à la première tâche. Pour régler autrement une étude (contexte perso, charte libre…), copier `sed-equipe/modele-projet/CLAUDE.md` à la racine du projet et n'y garder que les lignes du « Cadre » à changer. La conversation principale est l'orchestrateur ; chaque rôle tourne comme agent avec son modèle. Le travail est rangé dans le projet (`suivi/`, `scripts/`, `output/`, `a_partager/`) et se pousse par l'onglet Git de RStudio.
 
 En cas de problème, les lignes `[init]` des journaux du service disent quelle étape a échoué ; le détail de l'installation de l'équipe est dans `/tmp/init-sed.log`.
 
