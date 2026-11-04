@@ -13,6 +13,7 @@ Script d'initialisation personnel pour mes services **RStudio** sur le [SSPCloud
 4. Installe **Claude Code** (modèle Opus par défaut, ou celui passé en argument du script ; thème automatique, connexion par le jeton Vault s’il est fourni).
 5. Installe l'**équipe SED** : plugin `sed-equipe` (skills et six agents de rôle) depuis la marketplace privée `stephluquet/sspcloud-skills`, avec le jeton GitHub d'Onyxia. Autorise aussi les agents à lire `~/.claude/plugins` (réglage utilisateur de Claude Code). Pose enfin le **cadre de l'équipe** dans `~/.claude/CLAUDE.md` (contexte Insee, charte et modèle diaporama Insee appliqués, suivi demandé en début de session) : ouvrir ce service vaut demande de travailler avec l'équipe. Un bloc « Cadre » dans le `CLAUDE.md` d'un projet l'emporte, ligne par ligne. `~/.claude` n'étant pas conservé entre deux services, le plugin est réinstallé à chaque lancement, donc toujours à jour avec `main`.
 6. Installe LibreOffice si l'argument `libreoffice` est passé au lanceur (communicant : fichier des figures `.ods`, diaporamas `.odp`). Désactivé par défaut : quelques minutes de plus au lancement.
+7. **Reprend l'étude** : restaure depuis `s3://<identifiant>/sed/<dépôt>/` le travail sauvegardé en fin de tâche (`suivi/`, `output/`, `a_partager/`, tableau de bord) ; le code vient du dépôt Git cloné par le service. Le bucket est lu dans le jeton S3 d'Onyxia ; à défaut, argument `s3=<bucket>` du lanceur.
 
 Chaque étape écrit une ligne commençant par `[init]` dans les journaux du service, pour repérer facilement un éventuel problème.
 
@@ -52,4 +53,4 @@ En cas de problème, les lignes `[init]` des journaux du service disent quelle �
 
 - SSPCloud = **open data ou données fictives uniquement** : tout ce que Claude Code lit est envoyé à Anthropic.
 - Ne jamais définir `ANTHROPIC_API_KEY` (facturation à l'usage au lieu de l'abonnement).
-- Les données vont sur le stockage S3, jamais dans les dépôts Git.
+- Les données vont sur le stockage S3, jamais dans les dépôts Git. Dans un projet de l'équipe SED, Git ne reçoit que le code ; les résultats et le travail (qui portent des chiffres) vont dans `s3://<identifiant>/sed/<dépôt>/`.

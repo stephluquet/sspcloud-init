@@ -15,7 +15,8 @@
 #   4. installe Claude Code ;
 #   5. installe l'équipe SED (plugin sed-equipe : skills et agents) et
 #      pose son cadre dans ~/.claude/CLAUDE.md ;
-#   6. installe LibreOffice si demandé (figures .ods et diaporamas .odp).
+#   6. installe LibreOffice si demandé (figures .ods et diaporamas .odp) ;
+#   7. restaure le travail de l'étude depuis S3 (suivi/, output/, a_partager/).
 # =============================================================================
 
 # --- À personnaliser ---------------------------------------------------------
@@ -28,11 +29,15 @@ PLUGIN_SED="sed-equipe@sspcloud-skills"        # plugin de l'équipe (laisser vi
 # .odp ; quelques minutes de plus) ; tout autre mot est le modèle Claude Code
 # (ex. « sonnet », « claude-opus-5-5 »). Exemples : « libreoffice »,
 # « sonnet libreoffice ». Sans argument : Opus, pas de LibreOffice.
+# « s3=<bucket> » : bucket S3 personnel, seulement s'il n'est pas lu dans le
+# jeton S3 d'Onyxia (cas normal : rien à indiquer).
 LIBREOFFICE="non"
 MODELE_ARG=""
+S3_ARG=""
 for ARG in $*; do
   case "${ARG,,}" in
     libreoffice) LIBREOFFICE="oui" ;;
+    s3=*) S3_ARG="${ARG#*=}" ;;
     *) MODELE_ARG="$ARG" ;;
   esac
 done
@@ -344,6 +349,26 @@ elif command -v soffice > /dev/null; then
   echo "[init] LibreOffice présent."
 else
   echo "[init] LibreOffice non demandé (argument « libreoffice » du lanceur) : le communicant le signalera."
+fi
+
+# 7 ###########################################################################
+# Reprise automatique de l'étude : le service a cloné le dépôt (le code) ; le
+# travail (suivi/, output/, a_partager/, tableau de bord) est restauré depuis
+# s3://<bucket>/sed/<dépôt>/, où l'orchestrateur l'a sauvegardé en fin de tâche.
+# -----------------------------------------------------------------------------
+
+if [ -n "$S3_ARG" ]; then
+  sed -i '/S3_SED=/d' /home/onyxia/.bashrc 2>/dev/null
+  echo "export S3_SED=$S3_ARG  # bucket S3 personnel (argument du lanceur)" >> /home/onyxia/.bashrc
+  export S3_SED="$S3_ARG"
+fi
+OUTIL_SAUVEGARDE=/home/onyxia/.claude/plugins/marketplaces/${PLUGIN_SED#*@}/sed-equipe/skills/sed/outils/sauvegarde.py
+if [ -n "$SUBDIR" ] && [ -f "$OUTIL_SAUVEGARDE" ] && command -v aws > /dev/null; then
+  RESULTAT=$(timeout 600 python3 "$OUTIL_SAUVEGARDE" "$WORK_DIR/$SUBDIR" reprendre --plateforme sspcloud 2>&1 | tail -n 1)
+  echo "[init] $RESULTAT"
+  chown -R onyxia:users "$WORK_DIR/$SUBDIR" 2>/dev/null
+elif [ -n "$SUBDIR" ]; then
+  echo "[init] Reprise depuis S3 impossible (outil de sauvegarde ou client aws absent)."
 fi
 
 echo "[init] Initialisation terminée."
